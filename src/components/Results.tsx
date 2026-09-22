@@ -12,6 +12,8 @@ interface Props {
   stats: GameStats
   puzzleNumber: number
   isDaily: boolean
+  /** Score of the round just played, or null when nothing was just played. */
+  lastRunScore: number | null
   onPlayAgain: () => void
   onSwitchMode: () => void
 }
@@ -20,6 +22,7 @@ export default function Results({
   stats,
   puzzleNumber,
   isDaily,
+  lastRunScore,
   onPlayAgain,
   onSwitchMode,
 }: Props) {
@@ -34,6 +37,8 @@ export default function Results({
   }, [copied])
 
   const shareText = buildShareText(puzzleNumber, stats)
+  /** A replay that did not beat the saved run leaves the best one on screen. */
+  const showingBestInstead = lastRunScore !== null && lastRunScore !== stats.score
 
   async function handleCopy() {
     const ok = await copyToClipboard(shareText)
@@ -60,6 +65,12 @@ export default function Results({
           <div className="results__pace">
             {formatSeconds(stats.avgSeconds)}s per correct answer
           </div>
+          {showingBestInstead && (
+            <div className="results__best-note">
+              That run scored {lastRunScore}. Showing your best for today, which
+              is what gets copied.
+            </div>
+          )}
         </div>
 
         <table className="breakdown">

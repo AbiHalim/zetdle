@@ -56,6 +56,29 @@ The puzzle number is simply "how many days since `LAUNCH_DATE`, plus one".
 Practice mode uses plain `Math.random()` instead, so it is different every time
 and deliberately not shareable.
 
+## Keeping today's result
+
+Closing or reloading the page should not lose a score you wanted to share, so
+Zetdle remembers your result for the current puzzle.
+
+- It is kept in `localStorage` on your own device under the single key
+  `zetdle:daily-result:v1`. Nothing is sent anywhere, there is still no backend,
+  and it is the only thing the site stores.
+- Open the site again on the same day and you land straight on your result,
+  ready to copy.
+- **Your best run of the day is the one kept.** You can replay as often as you
+  like; a worse replay never overwrites a better score. If two runs tie on
+  score, the quicker one wins.
+- After a replay that did not beat your best, the results screen shows your best
+  run and notes what the latest attempt scored, so what is on screen is always
+  exactly what "Copy result" copies.
+- A result from a previous puzzle is ignored, so each new day starts clean.
+- Practice runs are never saved.
+
+If `localStorage` is unavailable (a private window, or blocked site data), the
+game still works exactly as before - the result simply is not remembered, rather
+than the page breaking. `src/lib/storage.ts` handles all of this.
+
 ## Changing the configuration
 
 Everything you are likely to want to tweak lives in **`src/config.ts`**:
@@ -98,8 +121,9 @@ src/
     rng.ts               seeded random number generator
     date.ts              Singapore date and puzzle numbering
     problems.ts          problem generation (pure, no React)
-    results.ts           scoring and the shareable emoji text
+    results.ts           scoring and the shareable text
     clipboard.ts         copy-to-clipboard with an old-browser fallback
+    storage.ts           remembering your best run of the day
   components/
     Start.tsx            "press any key to start"
     Countdown.tsx        3 - 2 - 1
@@ -112,8 +136,9 @@ src/
 
 The logic in `src/lib/` is deliberately free of React so it can be tested
 directly. `npm test` covers the generator's determinism, the number ranges, the
-subtraction and division guarantees, the Singapore midnight rollover, and the
-share-text format.
+subtraction and division guarantees, the Singapore midnight rollover, the
+share-text format, and the saved-result rules (including that a worse replay
+never overwrites a better score).
 
 ## Deploying
 

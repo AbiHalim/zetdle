@@ -4,7 +4,10 @@ interface Props {
   isDaily: boolean
   puzzleNumber: number
   isTouch: boolean
+  /** Score of the run already saved for today, if any. */
+  savedScore: number | null
   onStart: () => void
+  onShowResult: () => void
   onSwitchMode: () => void
 }
 
@@ -12,7 +15,9 @@ export default function Start({
   isDaily,
   puzzleNumber,
   isTouch,
+  savedScore,
   onStart,
+  onShowResult,
   onSwitchMode,
 }: Props) {
   // Any key starts the game on desktop.
@@ -43,6 +48,20 @@ export default function Start({
         )}
       </p>
       <p className="start__cue">{isTouch ? 'Tap to start' : 'Press any key to start'}</p>
+      {savedScore !== null && (
+        <button
+          type="button"
+          className="linkbtn"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onShowResult()
+          }}
+        >
+          See today&rsquo;s result ({savedScore})
+        </button>
+      )}
+
       <button
         type="button"
         className="linkbtn"

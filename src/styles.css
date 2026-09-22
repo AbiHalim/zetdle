@@ -348,3 +348,10 @@ button {
     gap: 20px;
   }
 }
+
+.results__best-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
