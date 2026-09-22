@@ -56,6 +56,27 @@ The puzzle number is simply "how many days since `LAUNCH_DATE`, plus one".
 Practice mode uses plain `Math.random()` instead, so it is different every time
 and deliberately not shareable.
 
+## What gets shared
+
+"Copy result" puts four lines on the clipboard:
+
+```
+🧮 Zetdle #42 — 58
+⏱ 2.1s per answer
+🐌 84 ÷ 7 — 6.2s
+https://zetdle.vercel.app
+```
+
+The third line is the single problem that took you longest, and how long it
+took. It is left out entirely if you did not answer anything, so a blank round
+shares three lines instead of four. The link comes from `SITE_URL` in
+`src/config.ts`, and the three marker emoji are written directly in
+`buildShareText` in `src/lib/results.ts` if you want to change them.
+
+On phones a "Share" button also appears when the browser offers a native share
+sheet. If the clipboard cannot be written to, the text is shown in a dialog so
+it can still be copied by hand.
+
 ## Keeping today's result
 
 Closing or reloading the page should not lose a score you wanted to share, so

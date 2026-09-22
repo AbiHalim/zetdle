@@ -52,20 +52,35 @@ describe('share text', () => {
       [
         '🧮 Zetdle #42 — 7',
         '⏱ 2.0s per answer',
+        '🐌 2 ÷ 3 — 5.0s',
         'https://zetdle.vercel.app',
       ].join('\n'),
     )
   })
 
-  it('is three lines with no operation squares', () => {
+  it('names the slowest problem and how long it took', () => {
+    const stats = computeStats([
+      answer('add', 1.0),
+      { problem: { op: 'mul', left: 7, right: 23, answer: 161 }, seconds: 6.24 },
+    ])
+    expect(buildShareText(3, stats, 'https://x.test')).toContain('🐌 7 × 23 — 6.2s')
+  })
+
+  it('has no operation squares', () => {
     const text = buildShareText(7, computeStats([answer('add', 1)]), 'https://x.test')
-    expect(text.split('\n')).toHaveLength(3)
     expect(text).not.toMatch(/[\u{1F7E9}\u{1F7E8}\u{1F7E5}\u{2B1B}]/u)
   })
 
-  it('shows a dash when nothing was answered', () => {
-    expect(buildShareText(1, computeStats([]), 'https://example.com')).toContain(
-      '⏱ —s per answer',
-    )
+  it('keeps the site url on the last line', () => {
+    const lines = buildShareText(7, computeStats([answer('add', 1)]), 'https://x.test').split('\n')
+    expect(lines).toHaveLength(4)
+    expect(lines[lines.length - 1]).toBe('https://x.test')
+  })
+
+  it('leaves out the slowest line when nothing was answered', () => {
+    const text = buildShareText(1, computeStats([]), 'https://example.com')
+    expect(text).toContain('⏱ —s per answer')
+    expect(text).not.toContain('🐌')
+    expect(text.split('\n')).toHaveLength(3)
   })
 })

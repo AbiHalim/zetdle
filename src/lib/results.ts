@@ -63,6 +63,7 @@ export function formatSeconds(seconds: number | null): string {
  *
  *   🧮 Zetdle #42 — 58
  *   ⏱ 2.1s per answer
+ *   🐌 84 ÷ 7 — 6.2s
  *   https://zetdle.vercel.app
  */
 export function buildShareText(
@@ -70,11 +71,17 @@ export function buildShareText(
   stats: GameStats,
   siteUrl: string = SITE_URL,
 ): string {
-  return [
+  const lines = [
     `🧮 Zetdle #${puzzleNumber} — ${stats.score}`,
     `⏱ ${formatSeconds(stats.avgSeconds)}s per answer`,
-    siteUrl,
-  ].join('\n')
+  ]
+
+  // Nothing answered means there is no slowest problem to brag or complain
+  // about, so the line is left out rather than shown as a dash.
+  if (stats.slowest) lines.push(`🐌 ${formatSlowest(stats.slowest)}`)
+
+  lines.push(siteUrl)
+  return lines.join('\n')
 }
 
 /** A human-readable line for the slowest problem, e.g. "84 ÷ 7 — 6.2s". */
