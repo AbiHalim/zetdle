@@ -100,6 +100,28 @@ If `localStorage` is unavailable (a private window, or blocked site data), the
 game still works exactly as before - the result simply is not remembered, rather
 than the page breaking. `src/lib/storage.ts` handles all of this.
 
+## The easter egg for scripts
+
+Answering every problem in the list inside a single 120-second round is not
+something hands can do - it means an automated script. When that happens the
+game skips the results screen entirely and shows `public/nice-try.jpg` full
+screen instead, and **the run is not saved**, so a script can never turn itself
+into a shareable score.
+
+- The trigger is simply "the problem list ran out", so it follows
+  `PROBLEMS_PER_DAY` automatically if you ever change that number.
+- The image is quietly preloaded once a player passes 80% of the list, so it
+  appears instantly. Ordinary players never get near that, so they never
+  download it.
+- It is dismissed by clicking, not by pressing a key, and only after a second -
+  otherwise the script that triggered it would close it before anyone saw it.
+- To change the picture, replace the file or point `CHEAT_IMAGE_URL` in
+  `src/config.ts` somewhere else.
+
+Everything in `public/` is served publicly, so the image also sits at
+`<your-site>/nice-try.jpg` and is visible in the repository. It is a prank, not
+a secret.
+
 ## Changing the configuration
 
 Everything you are likely to want to tweak lives in **`src/config.ts`**:
@@ -150,9 +172,12 @@ src/
     Countdown.tsx        3 - 2 - 1
     Game.tsx             the timer, the problem, the typing
     Keypad.tsx           on-screen number pad for touch devices
+    NiceTry.tsx          what a script gets instead of a score
     Results.tsx          score breakdown, copy and share
     TopBar.tsx           title and clock
   styles.css             all the styling
+public/
+  nice-try.jpg           the easter egg image
 ```
 
 The logic in `src/lib/` is deliberately free of React so it can be tested

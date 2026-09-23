@@ -7,11 +7,12 @@ import { loadResult, saveBestResult } from './lib/storage'
 import Countdown from './components/Countdown'
 import Game from './components/Game'
 import Results from './components/Results'
+import NiceTry from './components/NiceTry'
 import Start from './components/Start'
 import TopBar from './components/TopBar'
 
 type Mode = 'daily' | 'practice'
-type Phase = 'idle' | 'countdown' | 'playing' | 'done'
+type Phase = 'idle' | 'countdown' | 'playing' | 'done' | 'busted'
 
 export default function App() {
   // Worked out once, before the first paint, so a player who already has a
@@ -94,7 +95,22 @@ export default function App() {
 
   const startPlaying = useCallback(() => setPhase('playing'), [])
 
+  /**
+   * Someone answered all 300. Nothing is saved and no result is shown, so a
+   * script can never turn itself into a shareable score.
+   */
+  const bustCheater = useCallback(() => setPhase('busted'), [])
+
+  const dismissBusted = useCallback(() => {
+    setLastRunScore(null)
+    setPhase('idle')
+  }, [])
+
   const stats = useMemo(() => computeStats(answers), [answers])
+
+  if (phase === 'busted') {
+    return <NiceTry onDismiss={dismissBusted} />
+  }
 
   if (phase === 'playing') {
     return (
@@ -106,6 +122,7 @@ export default function App() {
           title={title}
           isTouch={isTouch}
           onFinish={finishGame}
+          onAllAnswered={bustCheater}
         />
       </div>
     )

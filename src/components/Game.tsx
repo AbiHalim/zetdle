@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { GAME_DURATION_SECONDS } from '../config'
+import { CHEAT_IMAGE_URL, GAME_DURATION_SECONDS } from '../config'
 import { formatProblem, type Problem } from '../lib/problems'
 import type { Answer } from '../lib/results'
 import Keypad from './Keypad'
@@ -10,11 +10,19 @@ interface Props {
   title: string
   isTouch: boolean
   onFinish: (answers: Answer[]) => void
+  /** Called when every problem in the list has been answered. */
+  onAllAnswered: () => void
 }
 
 const MAX_INPUT_LENGTH = 7
 
-export default function Game({ problems, title, isTouch, onFinish }: Props) {
+export default function Game({
+  problems,
+  title,
+  isTouch,
+  onFinish,
+  onAllAnswered,
+}: Props) {
   /** How many problems have been answered correctly - also the score. */
   const [index, setIndex] = useState(0)
   const [input, setInput] = useState('')
@@ -26,6 +34,8 @@ export default function Game({ problems, title, isTouch, onFinish }: Props) {
   const finishedRef = useRef(false)
   const onFinishRef = useRef(onFinish)
   onFinishRef.current = onFinish
+  const onAllAnsweredRef = useRef(onAllAnswered)
+  onAllAnsweredRef.current = onAllAnswered
 
   // The countdown. We store the end time once and compare against the clock,
   // so the timer stays accurate even if the browser throttles the interval.
@@ -66,6 +76,13 @@ export default function Game({ problems, title, isTouch, onFinish }: Props) {
       askedAtRef.current = now
       setIndex((i) => i + 1)
       setInput('')
+
+      // Clearing the entire list inside one round is not humanly possible, so
+      // this run was automated. No result, no saved score - just the picture.
+      if (index + 1 >= problems.length) {
+        finishedRef.current = true
+        onAllAnsweredRef.current()
+      }
     } else {
       // Wrong so far: leave it on screen, no penalty, no clearing.
       setInput(next)
@@ -80,6 +97,15 @@ export default function Game({ problems, title, isTouch, onFinish }: Props) {
   function pressBackspace() {
     setInput((prev) => prev.slice(0, -1))
   }
+
+  // Once the pace is already impossible, quietly fetch the easter egg so it
+  // appears instantly instead of loading in front of them. Ordinary players
+  // never get close to this, so they never download it.
+  useEffect(() => {
+    if (index === Math.floor(problems.length * 0.8)) {
+      new Image().src = CHEAT_IMAGE_URL
+    }
+  }, [index, problems.length])
 
   // Physical keyboard. No dependency array: the listener is re-attached each
   // render so it always sees the current input and problem.

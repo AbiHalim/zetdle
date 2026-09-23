@@ -21,6 +21,14 @@ export const PROBLEMS_PER_DAY = 300
 /** Used in the shareable result text. Replace once the site is deployed. */
 export const SITE_URL = 'https://zetdle.vercel.app'
 
+/**
+ * Answering every problem in the list inside one round is not something hands
+ * can do - it means a script. When that happens this image is shown instead of
+ * a result, and nothing is saved. The file lives in `public/`, and the path
+ * here is relative to the site root.
+ */
+export const CHEAT_IMAGE_URL = '/nice-try.jpg'
+
 /** Number ranges, copied from Zetamac's default settings. */
 export const RANGES = {
   /** Addition (and subtraction, which is addition in reverse): a + b. */
