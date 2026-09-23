@@ -113,8 +113,8 @@ into a shareable score.
 - The image is quietly preloaded once a player passes 80% of the list, so it
   appears instantly. Ordinary players never get near that, so they never
   download it.
-- It is dismissed by clicking, not by pressing a key, and only after a second -
-  otherwise the script that triggered it would close it before anyone saw it.
+- There is no way off the screen: no button, no click, no key press. Reloading
+  the page is the only escape.
 - To change the picture, replace the file or point `CHEAT_IMAGE_URL` in
   `src/config.ts` somewhere else.
 

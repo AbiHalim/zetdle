@@ -97,19 +97,15 @@ export default function App() {
 
   /**
    * Someone answered all 300. Nothing is saved and no result is shown, so a
-   * script can never turn itself into a shareable score.
+   * script can never turn itself into a shareable score. There is no way off
+   * this screen either - only a page reload.
    */
   const bustCheater = useCallback(() => setPhase('busted'), [])
-
-  const dismissBusted = useCallback(() => {
-    setLastRunScore(null)
-    setPhase('idle')
-  }, [])
 
   const stats = useMemo(() => computeStats(answers), [answers])
 
   if (phase === 'busted') {
-    return <NiceTry onDismiss={dismissBusted} />
+    return <NiceTry />
   }
 
   if (phase === 'playing') {
