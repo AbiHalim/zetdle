@@ -173,8 +173,13 @@ enable it, paste in the client ID and secret.
 Never use `https://*.vercel.app/**` - that would let any site on vercel.app
 receive auth codes for your project.
 
-**5. Add the keys.** Copy `.env.example` to `.env.local` and fill in the two
-values from Project Settings -> API. On Vercel, add the same two variables under
+**5. Add the keys.** The quickest way to find them: the green **Connect**
+button at the top of the Supabase dashboard -> **App Frameworks** -> Vite. It
+prints a ready-made `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` block you can
+paste straight into `.env.local` (copy `.env.example` to make it). They also
+live under Project Settings -> API Keys, where the browser-safe one may be
+labelled either *anon public* or *publishable* depending on how new your
+project is - both work. Never use the *service_role* or *secret* key. On Vercel, add the same two variables under
 Settings -> Environment Variables, ticked for **Production, Preview and
 Development** - and redeploy, because Vercel bakes them in at build time.
 

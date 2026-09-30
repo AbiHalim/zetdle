@@ -2,8 +2,13 @@ import { formatShortDate, type ChartData } from '../lib/chart'
 
 interface Props {
   data: ChartData
-  /** Today's score, for the caption. Null when today has not been played. */
+  /** Today's score. Null when today has not been played. */
   todayScore: number | null
+  /**
+   * The all-time best, which is not the same as the best in `data` - a
+   * personal best older than the chart window still counts.
+   */
+  highScore: number | null
 }
 
 // The drawing area inside the viewBox. Left padding leaves room for the y
@@ -27,8 +32,8 @@ const BASELINE = PAD_TOP + PLOT_HEIGHT
  * most people play on a phone, where hover does not exist, so the numbers
  * worth knowing are printed in the caption underneath instead.
  */
-export default function ScoreChart({ data, todayScore }: Props) {
-  const { points, runs, windowStart, windowDays, yMax, best } = data
+export default function ScoreChart({ data, todayScore, highScore }: Props) {
+  const { points, runs, windowStart, windowDays, yMax } = data
 
   if (points.length === 0) {
     return (
@@ -43,9 +48,9 @@ export default function ScoreChart({ data, todayScore }: Props) {
   const y = (score: number) => BASELINE - (score / yMax) * PLOT_HEIGHT
 
   const gridLines = [0, yMax / 2, yMax]
-  const summary = `Daily score over the last ${windowDays} days. Best ${best}${
-    todayScore === null ? '' : `, today ${todayScore}`
-  }.`
+  const summary = `Daily score over the last ${windowDays} days. High score ${
+    highScore ?? 'none yet'
+  }${todayScore === null ? '' : `, today ${todayScore}`}.`
 
   return (
     <figure className="chart">
@@ -109,11 +114,9 @@ export default function ScoreChart({ data, todayScore }: Props) {
         </text>
       </svg>
 
-      <figcaption className="chart__caption">
-        Best {best}
-        {todayScore === null ? '' : ` · today ${todayScore}`} · {points.length} of
-        the last {windowDays} days
-      </figcaption>
+      {highScore !== null && (
+        <figcaption className="chart__caption">High Score: {highScore}</figcaption>
+      )}
     </figure>
   )
 }
