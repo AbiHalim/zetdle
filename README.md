@@ -122,6 +122,93 @@ Everything in `public/` is served publicly, so the image also sits at
 `<your-site>/nice-try.jpg` and is visible in the repository. It is a prank, not
 a secret.
 
+## Accounts (optional)
+
+Accounts are an **optional extra**. With no Supabase credentials configured the
+game is exactly what it has always been - no sign-in button, no network
+requests, and the Supabase code is stripped out of the build entirely. Anyone
+who never signs in plays exactly as before, forever.
+
+Signing in with Google adds a daily streak, an all-time high score, a "New high
+score!" callout, a graph of the last 30 days on the results screen, and a streak
+line in the shared text.
+
+### Setting it up
+
+**1. Make a Supabase project** at [supabase.com](https://supabase.com) (free, no
+card). Then open the **SQL editor**, paste in the whole of
+[`supabase/schema.sql`](supabase/schema.sql), and run it once.
+
+**2. Get your Google OAuth credentials.** In the
+[Google Cloud Console](https://console.cloud.google.com): create a project, fill
+in **APIs & Services -> OAuth consent screen** (User type *External*, default
+scopes are fine so no review is needed), then **Credentials -> Create
+credentials -> OAuth client ID -> Web application**.
+
+Under **Authorized redirect URIs** put exactly **one** entry, and make it
+Supabase's callback, *not* your own site:
+
+```
+https://<your-project-ref>.supabase.co/auth/v1/callback
+```
+
+Supabase prints this exact URL on its Google provider page - copy it from there.
+Putting your own site URL here instead is the single most common mistake and
+produces `redirect_uri_mismatch`. Leave *Authorized JavaScript origins* empty.
+
+Keep the consent screen on **Testing** and add your friends' Gmail addresses as
+test users (up to 100). That gives you an invite-only app with no extra code.
+
+**3. Tell Supabase about Google.** Authentication -> Providers -> Google:
+enable it, paste in the client ID and secret.
+
+**4. Set the URLs.** Authentication -> URL Configuration:
+
+- *Site URL*: `https://zetdle.vercel.app`
+- *Redirect URLs*, one per line:
+  - `http://localhost:5173/**`
+  - `https://zetdle.vercel.app/**`
+  - `https://zetdle-*-<your-vercel-scope>.vercel.app/**` (for preview deploys)
+
+Never use `https://*.vercel.app/**` - that would let any site on vercel.app
+receive auth codes for your project.
+
+**5. Add the keys.** Copy `.env.example` to `.env.local` and fill in the two
+values from Project Settings -> API. On Vercel, add the same two variables under
+Settings -> Environment Variables, ticked for **Production, Preview and
+Development** - and redeploy, because Vercel bakes them in at build time.
+
+### Things that will trip you up
+
+- **Sign-in on a preview deploy lands you on production.** That is what a
+  missing redirect URL looks like: Supabase does not error, it silently falls
+  back to the Site URL. Check the allow-list first, always.
+- **The Google consent screen says `<ref>.supabase.co`**, not "Zetdle". Cosmetic,
+  and only fixable on a paid Supabase plan.
+- **Google blocks embedded browsers.** Anyone who opens a shared Zetdle link
+  inside Instagram or Messenger and taps sign in gets a wall, with no fix from
+  our side. They have to open it in a real browser.
+- **Supabase pauses a free project after 7 days of inactivity.** The game keeps
+  working - it just falls back to signed-out - but streaks freeze until someone
+  un-pauses it in the dashboard.
+- **Scores are forgeable.** Any signed-in player can write a plausible score
+  from the browser console, or backfill fake history. The database constraints
+  only force a forgery to *look* plausible. Genuinely preventing it needs a
+  server that generates the problems and marks the answers, which this project
+  deliberately does not have. Fine for streaks among friends; not a foundation
+  for a public leaderboard.
+- **The bundle roughly doubles** once credentials are set (about 50 KB to 112 KB
+  gzipped) because the Supabase SDK is included. With no credentials it is
+  stripped out completely, so signed-out visitors never pay for it.
+
+### How the streak is defined
+
+- **Playing counts, the score does not.** A zero still marks the day as played.
+- **Today is a grace day**: the streak counts back from today if you have
+  played, otherwise from yesterday, so it never looks broken first thing in the
+  morning. It only breaks once a whole day has been missed.
+- Practice runs never count, and never touch your history.
+
 ## Changing the configuration
 
 Everything you are likely to want to tweak lives in **`src/config.ts`**:
@@ -134,6 +221,9 @@ Everything you are likely to want to tweak lives in **`src/config.ts`**:
 | `COUNTDOWN_SECONDS` | The 3-2-1 before the timer starts. |
 | `PROBLEMS_PER_DAY` | How many problems are generated. 300 is far more than anyone finishes. |
 | `SITE_URL` | The link pasted into the shared result. **Update this after deploying.** |
+| `WRONG_ANSWER_COOLDOWN_MS` | How long a wrong guess stays red before the box clears. |
+| `HISTORY_CHART_DAYS` | How many days the results-screen graph covers. |
+| `AUTH_TIMEOUT_MS` | How long to wait for sign-in state before assuming signed out. |
 | `RANGES` | The number ranges for each operation, copied from Zetamac's defaults. |
 
 Changing `LAUNCH_DATE`, `PROBLEMS_PER_DAY` or `RANGES` changes the puzzle itself.
@@ -151,6 +241,14 @@ Four operations, each equally likely:
 - **Multiplication** — `a × b`, with `a` from 2 to 12 and `b` from 2 to 100
 - **Division** — multiplication in reverse: `(a × b) ÷ a`, so answers are always whole
 
+A guess counts as **wrong** once you have typed as many digits as the answer
+has. For an answer of 91, typing `8` is still in progress, but `80` is a real
+guess: the box turns red, freezes for 0.2 seconds, then clears itself so you
+retype from scratch. That is what stops people brute-forcing 91, 92, 93 until
+one is accepted - a patient script gets about 4 guesses a second instead of
+dozens, which is slower than simply doing the arithmetic. The delay lives in
+`WRONG_ANSWER_COOLDOWN_MS` in `src/config.ts`.
+
 Typing the correct answer advances immediately — no Enter key. A wrong answer
 just sits in the box until you fix it: no penalty, no skipping.
 
@@ -167,17 +265,29 @@ src/
     results.ts           scoring and the shareable text
     clipboard.ts         copy-to-clipboard with an old-browser fallback
     storage.ts           remembering your best run of the day
+    judge.ts             right, wrong, or still being typed
+    streak.ts            streaks and personal bests (pure)
+    chart.ts             working out what the graph should show (pure)
+    supabase.ts          the client, or null when accounts are off
+    history.ts           reading and writing day-by-day history
   components/
     Start.tsx            "press any key to start"
     Countdown.tsx        3 - 2 - 1
     Game.tsx             the timer, the problem, the typing
     Keypad.tsx           on-screen number pad for touch devices
     NiceTry.tsx          what a script gets instead of a score
+    AccountPanel.tsx     streak, personal best, sign in / out
+    ScoreChart.tsx       the 30-day graph, hand-rolled SVG
+  hooks/
+    useSession.ts        who is signed in
+    useHistory.ts        their day-by-day history
     Results.tsx          score breakdown, copy and share
     TopBar.tsx           title and clock
   styles.css             all the styling
 public/
   nice-try.jpg           the easter egg image
+supabase/
+  schema.sql             paste into the Supabase SQL editor once
 ```
 
 The logic in `src/lib/` is deliberately free of React so it can be tested

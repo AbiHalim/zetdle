@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { CHEAT_IMAGE_URL, GAME_DURATION_SECONDS } from '../config'
+import {
+  CHEAT_IMAGE_URL,
+  GAME_DURATION_SECONDS,
+  WRONG_ANSWER_COOLDOWN_MS,
+} from '../config'
+import { judgeInput } from '../lib/judge'
 import { formatProblem, type Problem } from '../lib/problems'
 import type { Answer } from '../lib/results'
 import Keypad from './Keypad'
@@ -32,6 +37,10 @@ export default function Game({
   /** When the current problem appeared, used to time each answer. */
   const askedAtRef = useRef(0)
   const finishedRef = useRef(false)
+  /** Nothing is accepted until this moment, set by a wrong guess. */
+  const lockedUntilRef = useRef(0)
+  /** Pending wipe of a wrong guess, so it can be cancelled or cleaned up. */
+  const wrongTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onFinishRef = useRef(onFinish)
   onFinishRef.current = onFinish
   const onAllAnsweredRef = useRef(onAllAnswered)
@@ -63,11 +72,19 @@ export default function Game({
 
   const current = problems[index]
 
+  /**
+   * Derived rather than stored: backspacing to a shorter number makes this
+   * false again on its own, with no extra state to keep in step.
+   */
+  const isWrong = current ? judgeInput(input, current.answer) === 'wrong' : false
+
   /** Take the would-be new input and either accept the answer or keep typing. */
   function offer(next: string) {
     if (finishedRef.current || !current) return
 
-    if (Number(next) === current.answer) {
+    const judgement = judgeInput(next, current.answer)
+
+    if (judgement === 'correct') {
       const now = performance.now()
       answersRef.current.push({
         problem: current,
@@ -76,6 +93,8 @@ export default function Game({
       askedAtRef.current = now
       setIndex((i) => i + 1)
       setInput('')
+      lockedUntilRef.current = 0
+      cancelWrongTimer()
 
       // Clearing the entire list inside one round is not humanly possible, so
       // this run was automated. No result, no saved score - just the picture.
@@ -83,20 +102,50 @@ export default function Game({
         finishedRef.current = true
         onAllAnsweredRef.current()
       }
-    } else {
-      // Wrong so far: leave it on screen, no penalty, no clearing.
-      setInput(next)
+      return
+    }
+
+    // A full-length guess that is simply wrong goes red, freezes for a moment
+    // so the red is seen, and then wipes itself. Retyping from scratch is what
+    // makes brute force expensive; it also avoids leaving a half-fixed number
+    // on screen. This only fires on a new guess, never on a re-render.
+    if (judgement === 'wrong') {
+      lockedUntilRef.current = performance.now() + WRONG_ANSWER_COOLDOWN_MS
+      cancelWrongTimer()
+      wrongTimerRef.current = setTimeout(() => {
+        wrongTimerRef.current = null
+        setInput('')
+      }, WRONG_ANSWER_COOLDOWN_MS)
+    }
+
+    setInput(next)
+  }
+
+  /** Frozen while a wrong guess is on screen waiting to be wiped. */
+  function isLocked() {
+    return performance.now() < lockedUntilRef.current
+  }
+
+  function cancelWrongTimer() {
+    if (wrongTimerRef.current !== null) {
+      clearTimeout(wrongTimerRef.current)
+      wrongTimerRef.current = null
     }
   }
 
   function pressDigit(digit: string) {
+    if (isLocked()) return
     if (input.length >= MAX_INPUT_LENGTH) return
     offer(input + digit)
   }
 
   function pressBackspace() {
+    if (isLocked()) return
     setInput((prev) => prev.slice(0, -1))
   }
+
+  // A round can end while a wrong guess is still waiting to be wiped.
+  useEffect(() => cancelWrongTimer, [])
 
   // Once the pace is already impossible, quietly fetch the easter egg so it
   // appears instantly instead of loading in front of them. Ordinary players
@@ -120,7 +169,7 @@ export default function Game({
         event.preventDefault()
         pressBackspace()
       } else if (event.key === 'Escape') {
-        setInput('')
+        if (!isLocked()) setInput('')
       }
     }
 
@@ -135,7 +184,12 @@ export default function Game({
         <div className="problem" aria-live="polite">
           {current ? formatProblem(current) : '—'}
         </div>
-        <div className={`answer${input ? ' answer--active' : ''}`}>
+        <div
+          className={`answer${input ? ' answer--active' : ''}${
+            isWrong ? ' answer--wrong' : ''
+          }`}
+          aria-invalid={isWrong}
+        >
           {input || <span className="answer__caret" />}
         </div>
         <div className="score-line">

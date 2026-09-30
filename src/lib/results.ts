@@ -1,5 +1,6 @@
 import { SITE_URL } from '../config'
 import { formatProblem, OPERATIONS, type Operation, type Problem } from './problems'
+import { formatStreak } from './streak'
 
 /**
  * Turning a finished game into numbers, and those numbers into the short
@@ -58,23 +59,35 @@ export function formatSeconds(seconds: number | null): string {
   return seconds === null ? '—' : seconds.toFixed(1)
 }
 
+export interface ShareOptions {
+  siteUrl?: string
+  /** Current daily streak, for signed-in players. Omitted when null or zero. */
+  streak?: number | null
+}
+
 /**
  * The text the "Copy result" button puts on the clipboard, e.g.
  *
  *   🧮 Zetdle #42 — 58
  *   ⏱ 2.1s per answer
+ *   🔥 9 day streak
  *   🐌 84 ÷ 7 — 6.2s
  *   https://zetdle.vercel.app
  */
 export function buildShareText(
   puzzleNumber: number,
   stats: GameStats,
-  siteUrl: string = SITE_URL,
+  options: ShareOptions = {},
 ): string {
+  const { siteUrl = SITE_URL, streak = null } = options
+
   const lines = [
     `🧮 Zetdle #${puzzleNumber} — ${stats.score}`,
     `⏱ ${formatSeconds(stats.avgSeconds)}s per answer`,
   ]
+
+  // Only signed-in players have a streak, and a streak of nothing is not news.
+  if (streak) lines.push(`🔥 ${formatStreak(streak)} streak`)
 
   // Nothing answered means there is no slowest problem to brag or complain
   // about, so the line is left out rather than shown as a dash.

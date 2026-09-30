@@ -18,6 +18,13 @@ export const COUNTDOWN_SECONDS = 3
 /** How many problems each daily puzzle contains (nobody should ever run out). */
 export const PROBLEMS_PER_DAY = 300
 
+/**
+ * After a complete but wrong guess, how long before another digit is accepted.
+ * Long enough that brute-forcing through 91, 92, 93... is slower than simply
+ * working the answer out, short enough that fixing a typo barely notices it.
+ */
+export const WRONG_ANSWER_COOLDOWN_MS = 200
+
 /** Used in the shareable result text. Replace once the site is deployed. */
 export const SITE_URL = 'https://zetdle.vercel.app'
 
@@ -28,6 +35,16 @@ export const SITE_URL = 'https://zetdle.vercel.app'
  * here is relative to the site root.
  */
 export const CHEAT_IMAGE_URL = '/nice-try.jpg'
+
+/** How many days of history the results-screen graph covers. */
+export const HISTORY_CHART_DAYS = 30
+
+/**
+ * How long to wait for the sign-in state to resolve before giving up and
+ * treating the player as signed out. Accounts are optional, so a slow or
+ * unreachable Supabase must never leave the screen stuck loading.
+ */
+export const AUTH_TIMEOUT_MS = 5000
 
 /** Number ranges, copied from Zetamac's default settings. */
 export const RANGES = {

@@ -34,6 +34,15 @@ export function daysBetween(fromDate: string, toDate: string): number {
   return Math.round(ms / 86400000)
 }
 
+/** Shift a "YYYY-MM-DD" date by whole days, forwards or backwards. */
+export function addDays(dateStr: string, delta: number): string {
+  const shifted = new Date(dateStringToUtcMs(dateStr) + delta * 86400000)
+  const year = shifted.getUTCFullYear()
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(shifted.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 /** Puzzle number: launch day is #1, the next day is #2, and so on. */
 export function getPuzzleNumber(dateStr: string): number {
   return daysBetween(LAUNCH_DATE, dateStr) + 1

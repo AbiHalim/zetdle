@@ -2,8 +2,14 @@ import { useCallback, useMemo, useState } from 'react'
 import { GAME_DURATION_SECONDS } from './config'
 import { getPuzzleDate, getPuzzleNumber } from './lib/date'
 import { getDailyProblems, getPracticeProblems } from './lib/problems'
+import { buildChartData } from './lib/chart'
+import { upsertDailyResult } from './lib/history'
 import { computeStats, type Answer } from './lib/results'
 import { loadResult, saveBestResult } from './lib/storage'
+import { computeHighScore, computeStreak, isNewHighScore } from './lib/streak'
+import { useHistory } from './hooks/useHistory'
+import { useSession } from './hooks/useSession'
+import type { AccountView } from './components/AccountPanel'
 import Countdown from './components/Countdown'
 import Game from './components/Game'
 import Results from './components/Results'
@@ -39,6 +45,9 @@ export default function App() {
     () => window.matchMedia('(hover: none) and (pointer: coarse)').matches,
     [],
   )
+
+  const session = useSession()
+  const history = useHistory(session.user?.id ?? null, puzzleDate)
 
   const isDaily = mode === 'daily'
   const puzzleNumber = useMemo(() => getPuzzleNumber(puzzleDate), [puzzleDate])
@@ -77,13 +86,23 @@ export default function App() {
         setSaved(best)
         setAnswers(best)
         setLastRunScore(played.length)
+
+        // Fire and forget: the results screen must never wait on the network,
+        // and a failure is already covered by the local save plus the sync
+        // that runs the next time history loads.
+        if (session.user) {
+          const userId = session.user.id
+          void upsertDailyResult(userId, puzzleDate, best).then((day) => {
+            if (day) history.applyDay(day)
+          })
+        }
       } else {
         setAnswers(played)
         setLastRunScore(null)
       }
       setPhase('done')
     },
-    [isDaily, puzzleDate],
+    [isDaily, puzzleDate, session.user, history],
   )
 
   const showSavedResult = useCallback(() => {
@@ -103,6 +122,32 @@ export default function App() {
   const bustCheater = useCallback(() => setPhase('busted'), [])
 
   const stats = useMemo(() => computeStats(answers), [answers])
+
+  const account = useMemo<AccountView>(() => {
+    const signedIn = session.status === 'signed-in'
+    const days = signedIn ? history.days : []
+    const todayRow = days.find((day) => day.date === puzzleDate)
+
+    return {
+      enabled: session.enabled,
+      status: session.status,
+      displayName: session.user?.name ?? session.user?.email ?? null,
+      streak: signedIn ? computeStreak(days.map((day) => day.date), puzzleDate) : null,
+      allTimeHigh: signedIn ? computeHighScore(days) : null,
+      // Compared against every day but today, so the answer is the same
+      // whether or not today's row has already been merged in.
+      isNewHigh:
+        signedIn && phase === 'done' && isDaily
+          ? isNewHighScore(days, puzzleDate, stats.score)
+          : false,
+      chart: signedIn && history.status === 'ready' ? buildChartData(days, puzzleDate) : null,
+      todayScore: todayRow?.score ?? null,
+      historyFailed: signedIn && history.status === 'error',
+      error: session.error,
+      onSignIn: session.signIn,
+      onSignOut: session.signOut,
+    }
+  }, [session, history.days, history.status, puzzleDate, stats.score, phase, isDaily])
 
   if (phase === 'busted') {
     return <NiceTry />
@@ -148,6 +193,7 @@ export default function App() {
           puzzleNumber={puzzleNumber}
           isDaily={isDaily}
           lastRunScore={lastRunScore}
+          account={account}
           onPlayAgain={startGame}
           onSwitchMode={switchMode}
         />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { copyToClipboard } from '../lib/clipboard'
+import AccountPanel, { type AccountView } from './AccountPanel'
 import { OPERATIONS, OP_SYMBOL } from '../lib/problems'
 import {
   buildShareText,
@@ -14,6 +15,7 @@ interface Props {
   isDaily: boolean
   /** Score of the round just played, or null when nothing was just played. */
   lastRunScore: number | null
+  account: AccountView
   onPlayAgain: () => void
   onSwitchMode: () => void
 }
@@ -23,6 +25,7 @@ export default function Results({
   puzzleNumber,
   isDaily,
   lastRunScore,
+  account,
   onPlayAgain,
   onSwitchMode,
 }: Props) {
@@ -36,7 +39,10 @@ export default function Results({
     return () => clearTimeout(id)
   }, [copied])
 
-  const shareText = buildShareText(puzzleNumber, stats)
+  // Only a signed-in player has a streak worth sharing.
+  const shareText = buildShareText(puzzleNumber, stats, {
+    streak: account.status === 'signed-in' ? (account.streak?.current ?? null) : null,
+  })
   /** A replay that did not beat the saved run leaves the best one on screen. */
   const showingBestInstead = lastRunScore !== null && lastRunScore !== stats.score
 
@@ -100,6 +106,8 @@ export default function Results({
         <div className="slowest">
           Slowest problem: <strong>{formatSlowest(stats.slowest)}</strong>
         </div>
+
+        {isDaily && <AccountPanel account={account} />}
 
         <div className="actions">
           {isDaily ? (

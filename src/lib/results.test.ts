@@ -48,7 +48,7 @@ describe('share text', () => {
       answer('mul', 3.0),
       answer('div', 5.0),
     ])
-    expect(buildShareText(42, stats, 'https://zetdle.vercel.app')).toBe(
+    expect(buildShareText(42, stats, { siteUrl: 'https://zetdle.vercel.app' })).toBe(
       [
         '🧮 Zetdle #42 — 7',
         '⏱ 2.0s per answer',
@@ -63,22 +63,41 @@ describe('share text', () => {
       answer('add', 1.0),
       { problem: { op: 'mul', left: 7, right: 23, answer: 161 }, seconds: 6.24 },
     ])
-    expect(buildShareText(3, stats, 'https://x.test')).toContain('🐌 7 × 23 — 6.2s')
+    expect(buildShareText(3, stats, { siteUrl: 'https://x.test' })).toContain('🐌 7 × 23 — 6.2s')
   })
 
   it('has no operation squares', () => {
-    const text = buildShareText(7, computeStats([answer('add', 1)]), 'https://x.test')
+    const text = buildShareText(7, computeStats([answer('add', 1)]), { siteUrl: 'https://x.test' })
     expect(text).not.toMatch(/[\u{1F7E9}\u{1F7E8}\u{1F7E5}\u{2B1B}]/u)
   })
 
   it('keeps the site url on the last line', () => {
-    const lines = buildShareText(7, computeStats([answer('add', 1)]), 'https://x.test').split('\n')
+    const lines = buildShareText(7, computeStats([answer('add', 1)]), { siteUrl: 'https://x.test' }).split('\n')
     expect(lines).toHaveLength(4)
     expect(lines[lines.length - 1]).toBe('https://x.test')
   })
 
+  it('adds a streak line for a signed-in player', () => {
+    const stats = computeStats([answer('add', 1), answer('mul', 3)])
+    const text = buildShareText(5, stats, { siteUrl: 'https://x.test', streak: 9 })
+    expect(text).toContain('\u{1F525} 9 days streak')
+    expect(text.split('\n')).toHaveLength(5)
+  })
+
+  it('gets the streak plural right', () => {
+    const stats = computeStats([answer('add', 1)])
+    expect(buildShareText(5, stats, { streak: 1 })).toContain('\u{1F525} 1 day streak')
+  })
+
+  it('leaves the streak line out when there is no streak', () => {
+    const stats = computeStats([answer('add', 1)])
+    for (const streak of [null, 0, undefined]) {
+      expect(buildShareText(5, stats, { streak })).not.toContain('\u{1F525}')
+    }
+  })
+
   it('leaves out the slowest line when nothing was answered', () => {
-    const text = buildShareText(1, computeStats([]), 'https://example.com')
+    const text = buildShareText(1, computeStats([]), { siteUrl: 'https://example.com' })
     expect(text).toContain('⏱ —s per answer')
     expect(text).not.toContain('🐌')
     expect(text.split('\n')).toHaveLength(3)
