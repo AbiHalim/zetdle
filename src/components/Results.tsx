@@ -79,6 +79,61 @@ export default function Results({
           )}
         </div>
 
+        {/*
+          Actions sit right under the score so they are on screen without
+          scrolling: sharing first, then starting another round.
+        */}
+        <div className="actions">
+          {isDaily && (
+            <div className="actions__row">
+              <button
+                type="button"
+                className="btn btn--primary btn--grow"
+                onClick={handleCopy}
+              >
+                {copied ? (
+                  <>
+                    <CheckIcon />
+                    Copied!
+                  </>
+                ) : (
+                  'Copy result'
+                )}
+              </button>
+              {canShare && (
+                <button type="button" className="btn btn--tonal" onClick={handleShare}>
+                  <ShareIcon />
+                  Share
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="actions__row">
+            <button
+              type="button"
+              className={isDaily ? 'btn btn--grow' : 'btn btn--primary btn--grow'}
+              onClick={onPlayAgain}
+            >
+              Play again
+            </button>
+            <button type="button" className="btn btn--grow" onClick={onSwitchMode}>
+              {isDaily ? 'Practice mode' : "Today's Zetdle"}
+            </button>
+          </div>
+
+          {!isDaily && (
+            <p className="practice-note">
+              Practice runs use random problems, so there is nothing to share.
+            </p>
+          )}
+
+          {/* The button label changes too, but screen readers need telling. */}
+          <span className="visually-hidden" role="status">
+            {copied ? 'Result copied to clipboard' : ''}
+          </span>
+        </div>
+
         <table className="breakdown">
           <thead>
             <tr>
@@ -107,37 +162,26 @@ export default function Results({
           Slowest problem: <strong>{formatSlowest(stats.slowest)}</strong>
         </div>
 
+        {/* Last on the page: it is an extra, and should never outshine sharing. */}
         {isDaily && <AccountPanel account={account} />}
-
-        <div className="actions">
-          {isDaily ? (
-            <>
-              <button type="button" className="btn btn--primary" onClick={handleCopy}>
-                Copy result
-              </button>
-              {canShare && (
-                <button type="button" className="btn" onClick={handleShare}>
-                  Share
-                </button>
-              )}
-              <div className="copied">{copied ? 'Copied!' : ''}</div>
-            </>
-          ) : (
-            <div className="practice-note">
-              This was a practice run with random problems, so there is nothing to
-              share. Play today&rsquo;s Zetdle for a shareable result.
-            </div>
-          )}
-
-          <button type="button" className="btn" onClick={onPlayAgain}>
-            Play again
-          </button>
-        </div>
-
-        <button type="button" className="linkbtn" onClick={onSwitchMode}>
-          {isDaily ? 'Practice with random problems' : "Back to today's Zetdle"}
-        </button>
       </div>
     </main>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg className="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  )
+}
+
+/** The familiar box-and-arrow share glyph. */
+function ShareIcon() {
+  return (
+    <svg className="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+    </svg>
   )
 }
